@@ -1,0 +1,72 @@
+spring:
+  application:
+    name: auth-service
+
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/authservice}
+    username: ${DATABASE_USERNAME:authservice_user}
+    password: ${DATABASE_PASSWORD:authservice_pass}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      connection-timeout: 30000
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: false
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+  mail:
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:1025}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: ${MAIL_SMTP_AUTH:false}
+          starttls:
+            enable: ${MAIL_SMTP_STARTTLS:false}
+    from: ${MAIL_FROM:noreply@lunfit.com}
+
+  task:
+    execution:
+      pool:
+        core-size: 2
+        max-size: 5
+        queue-capacity: 100
+    scheduling:
+      pool:
+        size: 2
+
+logging:
+  level:
+    com.lunfit.authservice: INFO
+    org.springframework.security: WARN
+
+server:
+  port: 8080
+
+# JWT Configuration
+jwt:
+  secret: ${JWT_SECRET:YourSuperSecretKeyThatShouldBeAtLeast256BitsLongForHS256AlgorithmSecurity}
+  access-token-expiry: 3600000  # 1 hour in milliseconds
+  refresh-token-expiry: 2592000000  # 30 days in milliseconds
+
+# Application Configuration
+app:
+  base-url: ${BASE_URL:http://localhost:8080}
+  verification-token-expiry: 3600  # 1 hour in seconds
+  max-resend-attempts: 5
+  resend-window-hours: 24
+  unverified-account-cleanup-days: 30

@@ -1,0 +1,89 @@
+# generated: 2026-03-23
+# last_updated: 2026-03-23
+# project: workout-service
+# project_key: NOKEY
+# tracking_system: file-system
+# story_location: _bmad-output/implementation-artifacts
+
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+#
+# Epic Status Transitions:
+#   - backlog → in-progress: Automatically when first story is created (via create-story)
+#   - in-progress → done: Manually when all stories reach 'done' status
+#
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created in stories folder
+#   - in-progress: Developer actively working on implementation
+#   - review: Ready for code review (via Dev's code-review workflow)
+#   - done: Story completed
+#
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+#
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when first story is created
+# - Stories can be worked in parallel if team capacity allows
+# - SM typically creates next story after previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+
+generated: 2026-03-23
+last_updated: 2026-03-23T10:00:00
+project: workout-service
+project_key: NOKEY
+tracking_system: file-system
+story_location: _bmad-output/implementation-artifacts
+
+development_status:
+  # Epic 1: Service Foundation & Security
+  epic-1: in-progress
+  1-1-project-scaffold-and-database-foundation: done
+  1-2-jwt-security-filter-chain: backlog
+  1-3-global-error-handling-and-api-documentation: backlog
+  1-4-workouteventpublisher-no-op-and-docker-setup: backlog
+  epic-1-retrospective: optional
+
+  # Epic 2: Workout Logging
+  epic-2: backlog
+  2-1-log-a-running-workout: backlog
+  2-2-workout-input-validation: backlog
+  2-3-overlap-prevention: backlog
+  epic-2-retrospective: optional
+
+  # Epic 3: Workout History & Retrieval
+  epic-3: backlog
+  3-1-paginated-workout-list: backlog
+  3-2-filter-workouts-by-date-range-and-type: backlog
+  3-3-sort-workout-list: backlog
+  3-4-get-single-workout-detail: backlog
+  epic-3-retrospective: optional
+
+  # Epic 4: Workout Management
+  epic-4: backlog
+  4-1-update-workout-fields: backlog
+  4-2-ownership-immutability: backlog
+  4-3-delete-workout: backlog
+  4-4-atomic-cascade-delete-of-associated-data: backlog
+  epic-4-retrospective: optional
+
+  # Epic 5: Training Analytics & Data Compliance
+  epic-5: backlog
+  5-1-workout-summary-statistics: backlog
+  5-2-export-workout-data-gdpr: backlog
+  5-3-delete-all-user-data-gdpr-right-to-erasure: backlog
+  epic-5-retrospective: optional
+
+  # Epic 6: Event Integration & Account Lifecycle (Phase 2)
+  epic-6: backlog
+  6-1-publish-workoutcompleted-event-to-rabbitmq: backlog
+  6-2-publish-workoutdeleted-event-to-rabbitmq: backlog
+  6-3-handle-account-deleted-event-cascade-user-data-removal: backlog
+  6-4-idempotent-event-processing: backlog
+  epic-6-retrospective: optional

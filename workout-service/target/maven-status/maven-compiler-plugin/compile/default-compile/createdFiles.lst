@@ -1,0 +1,10 @@
+com/lunfit/workoutservice/entity/WorkoutType.class
+com/lunfit/workoutservice/entity/BaseEntity.class
+com/lunfit/workoutservice/repository/RunningMetricsRepository.class
+com/lunfit/workoutservice/entity/Workout.class
+com/lunfit/workoutservice/entity/Workout$WorkoutBuilder.class
+com/lunfit/workoutservice/entity/RunningMetrics.class
+com/lunfit/workoutservice/security/SecurityConfig.class
+com/lunfit/workoutservice/WorkoutServiceApplication.class
+com/lunfit/workoutservice/repository/WorkoutRepository.class
+com/lunfit/workoutservice/entity/RunningMetrics$RunningMetricsBuilder.class

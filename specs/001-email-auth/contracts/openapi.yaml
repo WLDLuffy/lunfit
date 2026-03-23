@@ -1,0 +1,552 @@
+openapi: 3.0.3
+info:
+  title: LunFit Authentication Service API
+  description: |
+    Email-based authentication service for the LunFit exercise tracking application.
+
+    Features:
+    - User registration with email verification
+    - Email/password login
+    - JWT-based access tokens (1 hour expiration)
+    - Refresh token mechanism for seamless sessions
+    - Single active session per user
+    - Email verification with resend capability
+
+  version: 1.0.0
+  contact:
+    name: LunFit API Support
+    email: api@lunfit.com
+
+servers:
+  - url: http://localhost:8080
+    description: Local development
+  - url: https://api.lunfit.com
+    description: Production
+
+tags:
+  - name: Authentication
+    description: User registration, login, and token management
+  - name: Email Verification
+    description: Email verification and resend operations
+
+paths:
+  /api/v1/auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: Register a new user
+      description: |
+        Creates a new user account in PENDING state and sends a verification email.
+        The user must verify their email before they can log in.
+      operationId: registerUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: User registered successfully, verification email sent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterResponse'
+        '400':
+          description: Invalid input (validation errors)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidEmail:
+                  value:
+                    timestamp: '2026-01-01T12:00:00Z'
+                    status: 400
+                    error: Bad Request
+                    message: Invalid email format
+                    path: /api/v1/auth/register
+                weakPassword:
+                  value:
+                    timestamp: '2026-01-01T12:00:00Z'
+                    status: 400
+                    error: Bad Request
+                    message: Password must be at least 8 characters with uppercase, lowercase, number, and special character
+                    path: /api/v1/auth/register
+        '409':
+          description: Email already registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: '2026-01-01T12:00:00Z'
+                status: 409
+                error: Conflict
+                message: Email address is already registered
+                path: /api/v1/auth/register
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/auth/verify:
+    get:
+      tags:
+        - Email Verification
+      summary: Verify email address
+      description: |
+        Activates a user account by validating the email verification token.
+        Token must be valid and not expired (1 hour from creation).
+      operationId: verifyEmail
+      parameters:
+        - name: token
+          in: query
+          required: true
+          description: Email verification token from the verification email
+          schema:
+            type: string
+            example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890'
+      responses:
+        '200':
+          description: Email verified successfully, account activated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerifyEmailResponse'
+        '400':
+          description: Invalid or expired token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                expiredToken:
+                  value:
+                    timestamp: '2026-01-01T12:00:00Z'
+                    status: 400
+                    error: Bad Request
+                    message: Verification link has expired. Please request a new one.
+                    path: /api/v1/auth/verify
+                invalidToken:
+                  value:
+                    timestamp: '2026-01-01T12:00:00Z'
+                    status: 400
+                    error: Bad Request
+                    message: Invalid verification token
+                    path: /api/v1/auth/verify
+                alreadyUsed:
+                  value:
+                    timestamp: '2026-01-01T12:00:00Z'
+                    status: 400
+                    error: Bad Request
+                    message: This verification link has already been used
+                    path: /api/v1/auth/verify
+        '404':
+          description: Token not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/auth/verify/resend:
+    post:
+      tags:
+        - Email Verification
+      summary: Resend verification email
+      description: |
+        Sends a new verification email to the user.
+        Rate limited to 3-5 attempts per 24 hours.
+      operationId: resendVerificationEmail
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResendVerificationRequest'
+      responses:
+        '200':
+          description: Verification email sent successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResendVerificationResponse'
+        '400':
+          description: Invalid request or user already verified
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                alreadyVerified:
+                  value:
+                    timestamp: '2026-01-01T12:00:00Z'
+                    status: 400
+                    error: Bad Request
+                    message: Email address is already verified
+                    path: /api/v1/auth/verify/resend
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Too many resend attempts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: '2026-01-01T12:00:00Z'
+                status: 429
+                error: Too Many Requests
+                message: Maximum resend attempts reached. Please try again in 24 hours.
+                path: /api/v1/auth/verify/resend
+
+  /api/v1/auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: User login
+      description: |
+        Authenticates a user with email and password.
+        Returns access token (1 hour) and refresh token (30 days).
+        Only verified (ACTIVE) users can log in.
+        Logging in on a new device invalidates previous session.
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          description: Email not verified
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: '2026-01-01T12:00:00Z'
+                status: 400
+                error: Bad Request
+                message: Please verify your email address before logging in
+                path: /api/v1/auth/login
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: '2026-01-01T12:00:00Z'
+                status: 401
+                error: Unauthorized
+                message: Invalid email or password
+                path: /api/v1/auth/login
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/auth/refresh:
+    post:
+      tags:
+        - Authentication
+      summary: Refresh access token
+      description: |
+        Generates a new access token using a valid refresh token.
+        Also returns a new refresh token (token rotation for security).
+        Old refresh token is invalidated.
+      operationId: refreshToken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+      responses:
+        '200':
+          description: Token refreshed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefreshTokenResponse'
+        '401':
+          description: Invalid or expired refresh token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: '2026-01-01T12:00:00Z'
+                status: 401
+                error: Unauthorized
+                message: Invalid or expired refresh token. Please log in again.
+                path: /api/v1/auth/refresh
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/auth/logout:
+    post:
+      tags:
+        - Authentication
+      summary: User logout
+      description: |
+        Logs out the current user by invalidating their refresh token.
+        Access token remains valid until expiration (client should discard).
+      operationId: logout
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LogoutResponse'
+        '401':
+          description: Unauthorized (invalid or missing token)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT access token obtained from login or refresh endpoints
+
+  schemas:
+    RegisterRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+          description: User's email address (will be normalized to lowercase)
+          example: user@example.com
+        password:
+          type: string
+          minLength: 8
+          maxLength: 128
+          description: |
+            Password must contain:
+            - Minimum 8 characters
+            - At least one uppercase letter
+            - At least one lowercase letter
+            - At least one number
+            - At least one special character
+          example: SecurePass123!
+
+    RegisterResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Registration successful. Please check your email to verify your account.
+        email:
+          type: string
+          format: email
+          example: user@example.com
+        verificationEmailSent:
+          type: boolean
+          example: true
+
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          example: user@example.com
+        password:
+          type: string
+          example: SecurePass123!
+
+    LoginResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+          description: JWT access token (expires in 1 hour)
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        refreshToken:
+          type: string
+          description: Refresh token (expires in 30 days)
+          example: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+        tokenType:
+          type: string
+          example: Bearer
+        expiresIn:
+          type: integer
+          description: Access token expiration time in seconds
+          example: 3600
+        user:
+          $ref: '#/components/schemas/UserInfo'
+
+    RefreshTokenRequest:
+      type: object
+      required:
+        - refreshToken
+      properties:
+        refreshToken:
+          type: string
+          description: Current refresh token
+          example: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+
+    RefreshTokenResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+          description: New JWT access token (expires in 1 hour)
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        refreshToken:
+          type: string
+          description: New refresh token (expires in 30 days)
+          example: b2c3d4e5-f6a7-8901-bcde-f12345678901
+        tokenType:
+          type: string
+          example: Bearer
+        expiresIn:
+          type: integer
+          description: Access token expiration time in seconds
+          example: 3600
+
+    VerifyEmailResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Email verified successfully. You can now log in.
+        email:
+          type: string
+          format: email
+          example: user@example.com
+
+    ResendVerificationRequest:
+      type: object
+      required:
+        - email
+      properties:
+        email:
+          type: string
+          format: email
+          example: user@example.com
+
+    ResendVerificationResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Verification email sent successfully. Please check your inbox.
+        email:
+          type: string
+          format: email
+          example: user@example.com
+
+    LogoutResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Logout successful
+
+    UserInfo:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 12345
+        email:
+          type: string
+          format: email
+          example: user@example.com
+        emailVerified:
+          type: boolean
+          example: true
+        status:
+          type: string
+          enum: [PENDING, ACTIVE, SUSPENDED, DELETED]
+          example: ACTIVE
+        createdAt:
+          type: string
+          format: date-time
+          example: '2026-01-01T10:00:00Z'
+        lastLoginAt:
+          type: string
+          format: date-time
+          example: '2026-01-01T12:00:00Z'
+
+    ErrorResponse:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+          description: Timestamp when error occurred
+          example: '2026-01-01T12:00:00Z'
+        status:
+          type: integer
+          description: HTTP status code
+          example: 400
+        error:
+          type: string
+          description: HTTP status text
+          example: Bad Request
+        message:
+          type: string
+          description: Human-readable error message
+          example: Invalid email format
+        path:
+          type: string
+          description: Request path that caused the error
+          example: /api/v1/auth/register
+        errors:
+          type: array
+          description: Detailed validation errors (for 400 Bad Request)
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+                example: password
+              message:
+                type: string
+                example: Password must contain at least one uppercase letter
+
+security: []

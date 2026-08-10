@@ -1,0 +1,49 @@
+{
+  "expo": {
+    "name": "LunFit",
+    "slug": "lunfit-ui",
+    "scheme": "lunfit",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0b0b10",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.lunfit.app",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "LunFit uses your location to track distance, pace and route while you run.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "LunFit tracks your route in the background so your run keeps recording with the screen off."
+      }
+    },
+    "android": {
+      "package": "com.lunfit.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#0b0b10",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "LunFit uses your location to track distance, pace and route while you run."
+        }
+      ],
+      "expo-font"
+    ]
+  }
+}

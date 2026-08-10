@@ -1,0 +1,105 @@
+# Everything the Expo app talks to, in one command:
+#
+#   docker compose up -d --build
+#
+# The React Native client is deliberately NOT here — Metro's file watching is
+# slow through Docker Desktop's filesystem layer and `expo run:ios` needs macOS.
+# Run it natively:  cd lunfit-ui && npm start
+#
+# Port map (host -> service):
+#   8080  auth-service
+#   8082  workout-service   (container 8081; 8081 on the host belongs to Metro)
+#   5432  postgres
+#   8025  MailHog web UI — verification emails land here
+#   1025  MailHog SMTP
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: lunfit-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # Only executed when postgres_data is empty. After changing init.sql:
+      #   docker compose down -v && docker compose up -d
+      - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: lunfit-mailhog
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8025"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  auth-service:
+    build: ./auth-service
+    container_name: lunfit-auth
+    ports:
+      - "8080:8080"
+    environment:
+      DATABASE_URL: jdbc:postgresql://postgres:5432/authservice
+      DATABASE_USERNAME: authservice_user
+      DATABASE_PASSWORD: authservice_pass
+      # Shared with workout-service: auth signs the tokens, workout verifies them.
+      JWT_SECRET: ${JWT_SECRET:-YourSuperSecretKeyThatShouldBeAtLeast256BitsLongForHS256AlgorithmSecurity}
+      MAIL_HOST: mailhog
+      MAIL_PORT: 1025
+      MAIL_SMTP_AUTH: "false"
+      MAIL_SMTP_STARTTLS: "false"
+      MAIL_FROM: noreply@lunfit.com
+      # Verification links are opened from the host browser, so this stays localhost.
+      BASE_URL: http://localhost:8080
+      SPRING_PROFILES_ACTIVE: dev
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mailhog:
+        condition: service_started
+    # auth-service has no actuator dependency, so this is a TCP liveness probe
+    # rather than a real health endpoint. bash comes with the Temurin image.
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/8080"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+    restart: unless-stopped
+
+  workout-service:
+    build: ./workout-service
+    container_name: lunfit-workout
+    ports:
+      - "8082:8081"
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/workoutdb
+      DB_USERNAME: workout
+      DB_PASSWORD: workout
+      JWT_SECRET: ${JWT_SECRET:-YourSuperSecretKeyThatShouldBeAtLeast256BitsLongForHS256AlgorithmSecurity}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/8081"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

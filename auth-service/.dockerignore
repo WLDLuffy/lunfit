@@ -1,0 +1,14 @@
+target/
+.git/
+.idea/
+.claude/
+.specify/
+*.iml
+.env
+.env.local
+.env.*.local
+*.log
+.DS_Store
+Dockerfile
+.dockerignore
+docker-compose.yml

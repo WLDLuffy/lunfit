@@ -1,0 +1,15 @@
+target/
+.git/
+.idea/
+.claude/
+_bmad/
+_bmad-output/
+docs/
+*.iml
+.env
+.env.local
+.env.*.local
+*.log
+.DS_Store
+Dockerfile
+.dockerignore
